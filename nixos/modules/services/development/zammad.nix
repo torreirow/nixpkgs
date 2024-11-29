@@ -291,9 +291,11 @@ in
           echo "production: "
           echo -n "  secret_key_base: "
           cat ${cfg.secretKeyBaseFile}
-        } > ${cfg.dataDir}/config/secrets.yml
+          } > ${cfg.dataDir}/config/secrets.yml
         ''}
 
+          export PGPASSWORD=$(cat ${cfg.secretKeyBaseFile})
+
         # needed for cleanup
         shopt -s extglob
 
