@@ -209,6 +209,7 @@ in
         username = cfg.database.user;
         host = cfg.database.host;
         port = cfg.database.port;
+        password = cfg.database.password
       });
     };
 
