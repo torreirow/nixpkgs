@@ -128,12 +128,6 @@ in
           description = "Database port. Use `null` for default port.";
         };
 
-        password = lib.mkOption {
-          type = lib.types.nullOr lib.types.password;
-          default = null;
-          description = "Database password. Use `null` for default port.";
-        };
-
         name = lib.mkOption {
           type = lib.types.str;
           default = "zammad";
