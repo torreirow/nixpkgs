@@ -296,6 +296,7 @@ in
         ''}
 
           export PGPASSWORD=$(cat ${cfg.secretKeyBaseFile})
+          export TESTTOORREN="TEST"
 
         # needed for cleanup
         shopt -s extglob
