@@ -209,7 +209,6 @@ in
         username = cfg.database.user;
         host = cfg.database.host;
         port = cfg.database.port;
-        password = $(cat ${cfg.database.passwordFile})
       });
     };
 
@@ -295,9 +294,9 @@ in
           } > ${cfg.dataDir}/config/secrets.yml
         ''}
 
-          export PGPASSWORD=$(cat ${cfg.database.passwordFile})
+          #export PGPASSWORD=$(cat ${cfg.database.passwordFile})
           export TESTTOORREN="TEST"
-
+
         # needed for cleanup
         shopt -s extglob
 
