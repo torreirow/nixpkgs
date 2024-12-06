@@ -128,6 +128,12 @@ in
           description = "Database port. Use `null` for default port.";
         };
 
+        password = lib.mkOption {
+          type = lib.types.nullOr lib.types.password;
+          default = null;
+          description = "Database password. Use `null` for default port.";
+        };
+
         name = lib.mkOption {
           type = lib.types.str;
           default = "zammad";
@@ -209,7 +215,7 @@ in
         username = cfg.database.user;
         host = cfg.database.host;
         port = cfg.database.port;
-        password = cfg.database.passwords;
+        password = cfg.database.password;
       });
     };
 
@@ -295,7 +301,7 @@ in
           } > ${cfg.dataDir}/config/secrets.yml
         ''}
 
-          export PGPASSWORD=$(cat ${cfg.secretKeyBaseFile})
+          export PGPASSWORD=$(cat ${cfg.database.passwordFile})
           export TESTTOORREN="TEST"
 
         # needed for cleanup
