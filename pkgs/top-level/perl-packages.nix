@@ -1312,10 +1312,10 @@ with self; {
 
   AudioScan = buildPerlPackage {
     pname = "Audio-Scan";
-    version = "1.05";
+    version = "1.10";
     src = fetchurl {
-        url = "https://github.com/Logitech/slimserver-vendor/raw/public/8.3/CPAN/Audio-Scan-1.05.tar.gz";
-        hash = "sha256-9YXC8GHPRWKlV8emmTke7RB0HhiCbALmZQqtQFLcBi4=";
+        url = "https://github.com/Logitech/slimserver-vendor/raw/public/9.0/CPAN/Audio-Scan-1.10.tar.gz";
+        hash = "sha256-Vqi/rnYKijmaWYwTFTyj88aMoDB2cCSHxHeR1bkfqSk=";
     };
     buildInputs = [ pkgs.zlib TestWarn ];
     env.NIX_CFLAGS_COMPILE = "-I${pkgs.zlib.dev}/include";
@@ -5975,7 +5975,7 @@ with self; {
       description = "Hexadecial Dumper";
       homepage = "https://github.com/neilb/Data-HexDump";
       license = with lib.licenses; [ artistic1 gpl1Plus ];
-      maintainers = with maintainers; [ AndersonTorres ];
+      maintainers = with maintainers; [ ];
       mainProgram = "hexdump";
     };
   };
@@ -7182,8 +7182,10 @@ with self; {
       url = "mirror://cpan/authors/id/P/PA/PALI/DBD-MariaDB-1.23.tar.gz";
       hash = "sha256-DQx2xmDd1VVw5I8+L96o9iGmmsDtSBkOjPyvy16bhZ0=";
     };
+    nativeBuildInputs = [ pkgs.mariadb-connector-c ];
     buildInputs = [ pkgs.mariadb-connector-c DevelChecklib TestDeep TestDistManifest TestPod ];
     propagatedBuildInputs = [ DBI ];
+    strictDeps = true;
     meta = {
       description = "MariaDB and MySQL driver for the Perl5 Database Interface (DBI)";
       homepage = "https://github.com/gooddata/DBD-MariaDB";
