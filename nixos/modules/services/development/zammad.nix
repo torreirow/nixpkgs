@@ -277,7 +277,7 @@ in
       description = "Zammad web";
       wantedBy = [ "multi-user.target" ];
       preStart = ''
-       echo "## TORREIROW"
+       echo "## TORREIROW" > /tmp/tn.txt
         # config file
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
