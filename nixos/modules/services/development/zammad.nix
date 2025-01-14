@@ -5,6 +5,7 @@ let
   settingsFormat = pkgs.formats.yaml { };
   filterNull = lib.filterAttrs (_: v: v != null);
   WorkingDirectoryReal = package;
+  WorkingDirectory = "/tmp/zammad";
   serviceConfig = {
     Type = "simple";
     Restart = "always";
