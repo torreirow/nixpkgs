@@ -4,6 +4,7 @@ let
   cfg = config.services.zammad;
   settingsFormat = pkgs.formats.yaml { };
   filterNull = lib.filterAttrs (_: v: v != null);
+  WorkingDirectoryReal = package;
   serviceConfig = {
     Type = "simple";
     Restart = "always";
@@ -12,7 +13,6 @@ let
     Group = cfg.group;
     PrivateTmp = true;
     StateDirectory = "zammad";
-    WorkingDirectoryReal = package;
     WorkingDirectory = "/tmp/zammad";
   };
   environment = {
@@ -279,9 +279,9 @@ in
       wantedBy = [ "multi-user.target" ];
       preStart = ''
        echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
-       cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
-       chown +w ${WorkingDirectory}
         # config file
+        cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
+        chmod -R +w ${WorkingDirectoryReal}
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
         {
