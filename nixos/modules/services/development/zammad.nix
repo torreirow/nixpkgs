@@ -5,7 +5,7 @@ let
   settingsFormat = pkgs.formats.yaml { };
   filterNull = lib.filterAttrs (_: v: v != null);
   WorkingDirectoryReal = package;
-  WorkingDirectory = package; #"/tmp/zammad";
+  WorkingDirectory = "/tmp/zammad";
   serviceConfig = {
     Type = "simple";
     Restart = "always";
@@ -14,7 +14,7 @@ let
     Group = cfg.group;
     PrivateTmp = true;
     StateDirectory = "zammad";
-    WorkingDirectory = "/tmp/zammad";
+    WorkingDirectory = package #"/tmp/zammad";
   };
   environment = {
     RAILS_ENV = "production";
