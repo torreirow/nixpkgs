@@ -282,7 +282,7 @@ in
        echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
         # config file
         cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
-        chmod -R +w ${WorkingDirectoryReal}
+        chmod -R +w ${WorkingDirectory}
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
         {
