@@ -279,7 +279,7 @@ in
       wantedBy = [ "multi-user.target" ];
       preStart = ''
        echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
-       cp -pr {WorkingDirectoryReal} ${WorkingDirectory}
+       cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
        chown +w ${WorkingDirectory
         # config file
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
