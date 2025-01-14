@@ -1,8 +1,8 @@
 {
-  "owner": "zammad",
+  "owner": "torreirow",
   "repo": "zammad",
-  "rev": "1f09f838a2c9e484bb4f47e1abeeca3d763d4e7d",
-  "hash": "sha256-1N0tTYOUDtA/ZTOB5SqjwZKzLctgK8k76z847TFH1WQ=",
+  "rev": "59e3bd9bc300a2a4219f2d1d961d11d928846745",
+  "hash": "sha256-464a9332076c5e1b169138489281c6939258cf755294bc6453c79ef86cabc50a",
   "fetchSubmodules": true
 }
 
