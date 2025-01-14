@@ -5,7 +5,7 @@ let
   settingsFormat = pkgs.formats.yaml { };
   filterNull = lib.filterAttrs (_: v: v != null);
   WorkingDirectoryReal = package;
-  WorkingDirectory = "/tmp/zammad";
+  WorkingDirectory = package; #"/tmp/zammad";
   serviceConfig = {
     Type = "simple";
     Restart = "always";
@@ -281,9 +281,6 @@ in
       preStart = ''
        echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
         # config file
-        cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
-        chmod -R +w ${WorkingDirectory}
-        cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
         {
           echo -n "  password: "
