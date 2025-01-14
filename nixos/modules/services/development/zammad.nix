@@ -12,7 +12,8 @@ let
     Group = cfg.group;
     PrivateTmp = true;
     StateDirectory = "zammad";
-    WorkingDirectory = package;
+#    WorkingDirectory = package;
+    WorkingDirectory = "/tmp/zammad";
   };
   environment = {
     RAILS_ENV = "production";
@@ -277,7 +278,7 @@ in
       description = "Zammad web";
       wantedBy = [ "multi-user.target" ];
       preStart = ''
-       echo "## TORREIROW" > /tmp/tn.txt
+       echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
         # config file
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
