@@ -280,7 +280,7 @@ in
       preStart = ''
        echo "## TORREIROW" > ${cfg.dataDir}/config/tn.txt
        cp -pr ${WorkingDirectoryReal} ${WorkingDirectory}
-       chown +w ${WorkingDirectory
+       chown +w ${WorkingDirectory}
         # config file
         cat ${databaseConfig} > ${cfg.dataDir}/config/database.yml
         ${lib.optionalString (cfg.database.passwordFile != null) ''
