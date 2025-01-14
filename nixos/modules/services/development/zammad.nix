@@ -14,7 +14,7 @@ let
     Group = cfg.group;
     PrivateTmp = true;
     StateDirectory = "zammad";
-    WorkingDirectory = package #"/tmp/zammad";
+    WorkingDirectory = package; #"/tmp/zammad";
   };
   environment = {
     RAILS_ENV = "production";
