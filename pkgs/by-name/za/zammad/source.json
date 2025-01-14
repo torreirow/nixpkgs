@@ -2,7 +2,7 @@
   "owner": "torreirow",
   "repo": "zammad",
   "rev": "59e3bd9bc300a2a4219f2d1d961d11d928846745",
-  "hash": "sha256-a6c2f8f19dcfc377243a64ff9adccffa1ae5e6c1496cf45d0c02988884f9467b",
+  "hash": "a6c2f8f19dcfc377243a64ff9adccffa1ae5e6c1496cf45d0c02988884f9467b",
   "fetchSubmodules": true
 }
 
