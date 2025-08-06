@@ -19,6 +19,7 @@ let
       }
       ''
         export ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="$(${lib.getExe pkgs.openssl} genrsa -traditional 4096 | ${pkgs.coreutils}/bin/base64 -w0)"
+        # Use a temporary database URL for config validation
         export ATTIC_SERVER_DATABASE_URL="sqlite://:memory:"
         ${lib.getExe cfg.package} --mode check-config -f $configFile
         cat <$configFile >$out
@@ -171,7 +172,11 @@ in
         max-size = 262144; # 256 KiB
       };
 
-      database.url = lib.mkIf (cfg.databaseFile == null) (lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc");
+      # Only set database.url if databaseFile is not provided
+      # When databaseFile is provided, the ATTIC_SERVER_DATABASE_URL environment variable will be used instead
+      database = lib.mkIf (cfg.databaseFile == null) {
+        url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
+      };
 
       # "storage" is internally tagged
       # if the user sets something the whole thing must be replaced
