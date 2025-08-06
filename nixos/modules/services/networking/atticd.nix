@@ -12,6 +12,12 @@ let
 
   format = pkgs.formats.toml { };
 
+  # Read database URL from databaseFile if provided
+  databaseUrlFromFile = if cfg.databaseFile != null then
+    builtins.readFile cfg.databaseFile
+  else
+    "";
+    
   checkedConfigFile =
     pkgs.runCommand "checked-attic-server.toml"
       {
@@ -87,16 +93,16 @@ in
 
       databaseFile = lib.mkOption {
         description = ''
-          Path to an EnvironmentFile containing database configuration:
-          
-          - ATTIC_SERVER_DATABASE_URL: The database connection URL.
+          Path to a file containing only the database URL.
           
           This allows you to keep database credentials separate from the main configuration.
           When this option is set, it overrides any database.url setting in the configuration.
+          
+          The file should contain only the database URL string, without any variable name or quotes.
         '';
         type = types.nullOr types.path;
         default = null;
-        example = "/run/secrets/atticd-database.env";
+        example = "/run/secrets/atticd-database-url";
       };
 
       user = lib.mkOption {
@@ -172,10 +178,13 @@ in
         max-size = 262144; # 256 KiB
       };
 
-      # Only set database.url if databaseFile is not provided
-      # When databaseFile is provided, the ATTIC_SERVER_DATABASE_URL environment variable will be used instead
-      database = lib.mkIf (cfg.databaseFile == null) {
-        url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
+      # Database configuration
+      # When databaseFile is provided, read the URL from that file
+      # Otherwise use the default SQLite URL
+      database = {
+        url = if cfg.databaseFile != null
+          then lib.mkForce (builtins.readFile cfg.databaseFile)
+          else lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
       };
 
       # "storage" is internally tagged
@@ -194,8 +203,7 @@ in
 
       serviceConfig = {
         ExecStart = "${lib.getExe cfg.package} -f ${checkedConfigFile} --mode ${cfg.mode}";
-        EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile 
-          ++ lib.optional (cfg.databaseFile != null) cfg.databaseFile;
+        EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
         StateDirectory = "atticd"; # for usage with local storage and sqlite
         DynamicUser = true;
         User = cfg.user;
