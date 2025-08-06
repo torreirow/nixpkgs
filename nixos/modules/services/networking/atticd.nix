@@ -12,23 +12,33 @@ let
 
   format = pkgs.formats.toml { };
 
-  # Read database URL from databaseFile if provided
-  databaseUrlFromFile = if cfg.databaseFile != null then
-    builtins.readFile cfg.databaseFile
-  else
-    "";
     
   checkedConfigFile =
     pkgs.runCommand "checked-attic-server.toml"
       {
         configFile = format.generate "server.toml" cfg.settings;
+        databaseFile = cfg.databaseFile;
+        passAsFile = [ "configFile" ] ++ lib.optional (cfg.databaseFile != null) "databaseFile";
       }
       ''
         export ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="$(${lib.getExe pkgs.openssl} genrsa -traditional 4096 | ${pkgs.coreutils}/bin/base64 -w0)"
         # Use a temporary database URL for config validation
         export ATTIC_SERVER_DATABASE_URL="sqlite://:memory:"
-        ${lib.getExe cfg.package} --mode check-config -f $configFile
-        cat <$configFile >$out
+        
+        # Create a copy of the config file that we can modify
+        cp "$configFilePath" config.toml
+        
+        # If databaseFile is provided, update the database URL in the config
+        if [ -n "${toString cfg.databaseFile}" ]; then
+          # Extract the database URL from the file
+          DATABASE_URL=$(cat "$databaseFilePath")
+          
+          # Use sed to replace the database URL in the config file
+          ${pkgs.gnused}/bin/sed -i 's|url = ".*"|url = "'"$DATABASE_URL"'"|' config.toml
+        fi
+        
+        ${lib.getExe cfg.package} --mode check-config -f config.toml
+        cp config.toml $out
       '';
 
   atticadmShim = pkgs.writeShellScript "atticadm" ''
@@ -179,12 +189,8 @@ in
       };
 
       # Database configuration
-      # When databaseFile is provided, read the URL from that file
-      # Otherwise use the default SQLite URL
       database = {
-        url = if cfg.databaseFile != null
-          then lib.mkForce (builtins.readFile cfg.databaseFile)
-          else lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
+        url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
       };
 
       # "storage" is internally tagged
