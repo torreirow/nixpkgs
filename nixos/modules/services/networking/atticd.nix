@@ -189,9 +189,8 @@ in
 
       serviceConfig = {
         ExecStart = "${lib.getExe cfg.package} -f ${checkedConfigFile} --mode ${cfg.mode}";
-        EnvironmentFile = [ 
-          cfg.environmentFile 
-        ] ++ lib.optional (cfg.databaseFile != null) cfg.databaseFile;
+        EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile 
+          ++ lib.optional (cfg.databaseFile != null) cfg.databaseFile;
         StateDirectory = "atticd"; # for usage with local storage and sqlite
         DynamicUser = true;
         User = cfg.user;
