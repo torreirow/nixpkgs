@@ -12,21 +12,31 @@ let
 
   format = pkgs.formats.toml { };
 
-  # Generate the configuration file based on either the provided configurationFile or settings
+  # Generate config file from settings if configurationFile is not provided
   configFile = if cfg.configurationFile != null
     then cfg.configurationFile
     else format.generate "server.toml" cfg.settings;
 
+  # For validation only - we don't use the output if configurationFile is provided
   checkedConfigFile =
     pkgs.runCommand "checked-attic-server.toml"
       {
         inherit configFile;
+        passAsFile = [ "configFile" ];
       }
       ''
         export ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="$(${lib.getExe pkgs.openssl} genrsa -traditional 4096 | ${pkgs.coreutils}/bin/base64 -w0)"
         export ATTIC_SERVER_DATABASE_URL="sqlite://:memory:"
-        ${lib.getExe cfg.package} --mode check-config -f $configFile
-        cat <$configFile >$out
+        
+        # If configurationFile is provided, we can't validate it during build
+        # since it might be a runtime secret (like from agenix)
+        if [ "${toString cfg.configurationFile}" != "" ]; then
+          # Just create an empty file as placeholder
+          touch $out
+        else
+          ${lib.getExe cfg.package} --mode check-config -f $configFilePath
+          cat $configFilePath > $out
+        fi
       '';
 
   atticadmShim = pkgs.writeShellScript "atticadm" ''
@@ -37,7 +47,7 @@ let
       fi
     fi
 
-    exec ${cfg.package}/bin/atticadm -f ${checkedConfigFile} "$@"
+    exec ${cfg.package}/bin/atticadm -f ${if cfg.configurationFile != null then cfg.configurationFile else checkedConfigFile} "$@"
   '';
 
   atticadmWrapper = pkgs.writeShellScriptBin "atticd-atticadm" ''
@@ -60,10 +70,8 @@ let
 
   hasLocalPostgresDB =
     let
-      # Try to extract database URL from settings or configuration file
-      url = if cfg.configurationFile != null 
-        then "" # Can't extract from external file during evaluation
-        else cfg.settings.database.url or "";
+      # Can only check database URL from settings if configurationFile is not used
+      url = if cfg.configurationFile == null then cfg.settings.database.url or "" else "";
       localStrings = [
         "localhost"
         "127.0.0.1"
@@ -112,11 +120,12 @@ in
         description = ''
           Path to a complete TOML configuration file for atticd.
           When this is set, the settings option is ignored.
+          This is useful for using with agenix or other secret management tools.
           See <https://github.com/zhaofengli/attic/blob/main/server/src/config-template.toml>
         '';
         type = types.nullOr types.path;
         default = null;
-        example = "/etc/atticd/config.toml";
+        example = "config.age.secrets.attic-config.path";
       };
 
       settings = lib.mkOption {
@@ -196,7 +205,7 @@ in
       wants = [ "network-online.target" ];
 
       serviceConfig = {
-        ExecStart = "${lib.getExe cfg.package} -f ${checkedConfigFile} --mode ${cfg.mode}";
+        ExecStart = "${lib.getExe cfg.package} -f ${if cfg.configurationFile != null then cfg.configurationFile else checkedConfigFile} --mode ${cfg.mode}";
         EnvironmentFile = cfg.environmentFile;
         StateDirectory = "atticd"; # for usage with local storage and sqlite
         DynamicUser = true;
