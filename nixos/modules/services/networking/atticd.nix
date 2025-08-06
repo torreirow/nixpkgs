@@ -12,33 +12,21 @@ let
 
   format = pkgs.formats.toml { };
 
-    
+  # Generate the configuration file based on either the provided configurationFile or settings
+  configFile = if cfg.configurationFile != null
+    then cfg.configurationFile
+    else format.generate "server.toml" cfg.settings;
+
   checkedConfigFile =
     pkgs.runCommand "checked-attic-server.toml"
       {
-        configFile = format.generate "server.toml" cfg.settings;
-        databaseFile = cfg.databaseFile;
-        passAsFile = [ "configFile" ] ++ lib.optional (cfg.databaseFile != null) "databaseFile";
+        inherit configFile;
       }
       ''
         export ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="$(${lib.getExe pkgs.openssl} genrsa -traditional 4096 | ${pkgs.coreutils}/bin/base64 -w0)"
-        # Use a temporary database URL for config validation
         export ATTIC_SERVER_DATABASE_URL="sqlite://:memory:"
-        
-        # Create a copy of the config file that we can modify
-        cp "$configFilePath" config.toml
-        
-        # If databaseFile is provided, update the database URL in the config
-        if [ -n "${toString cfg.databaseFile}" ]; then
-          # Extract the database URL from the file
-          DATABASE_URL=$(cat "$databaseFilePath")
-          
-          # Use sed to replace the database URL in the config file
-          ${pkgs.gnused}/bin/sed -i 's|url = ".*"|url = "'"$DATABASE_URL"'"|' config.toml
-        fi
-        
-        ${lib.getExe cfg.package} --mode check-config -f config.toml
-        cp config.toml $out
+        ${lib.getExe cfg.package} --mode check-config -f $configFile
+        cat <$configFile >$out
       '';
 
   atticadmShim = pkgs.writeShellScript "atticadm" ''
@@ -72,7 +60,10 @@ let
 
   hasLocalPostgresDB =
     let
-      url = cfg.settings.database.url or "";
+      # Try to extract database URL from settings or configuration file
+      url = if cfg.configurationFile != null 
+        then "" # Can't extract from external file during evaluation
+        else cfg.settings.database.url or "";
       localStrings = [
         "localhost"
         "127.0.0.1"
@@ -101,20 +92,6 @@ in
         default = null;
       };
 
-      databaseFile = lib.mkOption {
-        description = ''
-          Path to a file containing only the database URL.
-          
-          This allows you to keep database credentials separate from the main configuration.
-          When this option is set, it overrides any database.url setting in the configuration.
-          
-          The file should contain only the database URL string, without any variable name or quotes.
-        '';
-        type = types.nullOr types.path;
-        default = null;
-        example = "/run/secrets/atticd-database-url";
-      };
-
       user = lib.mkOption {
         description = ''
           The user under which attic runs.
@@ -131,9 +108,21 @@ in
         default = "atticd";
       };
 
+      configurationFile = lib.mkOption {
+        description = ''
+          Path to a complete TOML configuration file for atticd.
+          When this is set, the settings option is ignored.
+          See <https://github.com/zhaofengli/attic/blob/main/server/src/config-template.toml>
+        '';
+        type = types.nullOr types.path;
+        default = null;
+        example = "/etc/atticd/config.toml";
+      };
+
       settings = lib.mkOption {
         description = ''
           Structured configurations of atticd.
+          This is ignored when configurationFile is set.
           See <https://github.com/zhaofengli/attic/blob/main/server/src/config-template.toml>
         '';
         type = format.type;
@@ -171,45 +160,44 @@ in
         message = ''
           <option>services.atticd.environmentFile</option> is not set.
 
-          Run `openssl genrsa -traditional 4496 | base64 -w0` and create a file with the following contents:
+          Run `openssl genrsa -traditional 4096 | base64 -w0` and create a file with the following contents:
 
-          ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="output from command"
+          ATTIC_SERVER_TOKEN_RS256_SECRET="output from command"
 
           Then, set `services.atticd.environmentFile` to the quoted absolute path of the file.
         '';
       }
     ];
 
-    services.atticd.settings = {
-      chunking = lib.mkDefault {
-        nar-size-threshold = 65536;
-        min-size = 16384; # 16 KiB
-        avg-size = 65536; # 64 KiB
-        max-size = 262144; # 256 KiB
-      };
+    services.atticd = lib.mkIf (cfg.configurationFile == null) {
+      settings = {
+        chunking = lib.mkDefault {
+          nar-size-threshold = 65536;
+          min-size = 16384; # 16 KiB
+          avg-size = 65536; # 64 KiB
+          max-size = 262144; # 256 KiB
+        };
 
-      # Database configuration
-      database = {
-        url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
-      };
+        database.url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
 
-      # "storage" is internally tagged
-      # if the user sets something the whole thing must be replaced
-      storage = lib.mkDefault {
-        type = "local";
-        path = "/var/lib/atticd/storage";
+        # "storage" is internally tagged
+        # if the user sets something the whole thing must be replaced
+        storage = lib.mkDefault {
+          type = "local";
+          path = "/var/lib/atticd/storage";
+        };
       };
     };
 
     systemd.services.atticd = {
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" ] ++ lib.optionals hasLocalPostgresDB [ "postgresql.service" ];
-      requires = lib.optionals hasLocalPostgresDB [ "postgresql.service" ];
+      after = [ "network-online.target" ] ++ lib.optionals hasLocalPostgresDB [ "postgresql.target" ];
+      requires = lib.optionals hasLocalPostgresDB [ "postgresql.target" ];
       wants = [ "network-online.target" ];
 
       serviceConfig = {
         ExecStart = "${lib.getExe cfg.package} -f ${checkedConfigFile} --mode ${cfg.mode}";
-        EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
+        EnvironmentFile = cfg.environmentFile;
         StateDirectory = "atticd"; # for usage with local storage and sqlite
         DynamicUser = true;
         User = cfg.user;
