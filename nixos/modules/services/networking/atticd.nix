@@ -84,6 +84,20 @@ in
         default = null;
       };
 
+      databaseFile = lib.mkOption {
+        description = ''
+          Path to an EnvironmentFile containing database configuration:
+          
+          - ATTIC_SERVER_DATABASE_URL: The database connection URL.
+          
+          This allows you to keep database credentials separate from the main configuration.
+          When this option is set, it overrides any database.url setting in the configuration.
+        '';
+        type = types.nullOr types.path;
+        default = null;
+        example = "/run/secrets/atticd-database.env";
+      };
+
       user = lib.mkOption {
         description = ''
           The user under which attic runs.
@@ -140,9 +154,9 @@ in
         message = ''
           <option>services.atticd.environmentFile</option> is not set.
 
-          Run `openssl genrsa -traditional 4096 | base64 -w0` and create a file with the following contents:
+          Run `openssl genrsa -traditional 4496 | base64 -w0` and create a file with the following contents:
 
-          ATTIC_SERVER_TOKEN_RS256_SECRET="output from command"
+          ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64="output from command"
 
           Then, set `services.atticd.environmentFile` to the quoted absolute path of the file.
         '';
@@ -157,7 +171,7 @@ in
         max-size = 262144; # 256 KiB
       };
 
-      database.url = lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc";
+      database.url = lib.mkIf (cfg.databaseFile == null) (lib.mkDefault "sqlite:///var/lib/atticd/server.db?mode=rwc");
 
       # "storage" is internally tagged
       # if the user sets something the whole thing must be replaced
@@ -169,13 +183,15 @@ in
 
     systemd.services.atticd = {
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" ] ++ lib.optionals hasLocalPostgresDB [ "postgresql.target" ];
-      requires = lib.optionals hasLocalPostgresDB [ "postgresql.target" ];
+      after = [ "network-online.target" ] ++ lib.optionals hasLocalPostgresDB [ "postgresql.service" ];
+      requires = lib.optionals hasLocalPostgresDB [ "postgresql.service" ];
       wants = [ "network-online.target" ];
 
       serviceConfig = {
         ExecStart = "${lib.getExe cfg.package} -f ${checkedConfigFile} --mode ${cfg.mode}";
-        EnvironmentFile = cfg.environmentFile;
+        EnvironmentFile = [ 
+          cfg.environmentFile 
+        ] ++ lib.optional (cfg.databaseFile != null) cfg.databaseFile;
         StateDirectory = "atticd"; # for usage with local storage and sqlite
         DynamicUser = true;
         User = cfg.user;
